@@ -1,0 +1,200 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>CSharp-Web-Notification-Sample</title>
+
+
+    <!-- app icon -->
+    <link rel="apple-touch-icon" sizes="57x57" href="icon/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="icon/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="icon/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="icon/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="icon/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="icon/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icon/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icon/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon/favicon-16x16.png">
+    <link rel="manifest" href="icon/manifest.json">
+    <meta name="msapplication-TileColor" content="#2F2C25">
+    <meta name="msapplication-TileImage" content="icon/ms-icon-144x144.png">
+    <meta name="theme-color" content="#2F2C25">
+
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.8.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.8.1/firebase-messaging.js"></script>
+
+
+
+
+</head>
+<body>
+    <!-- Get Permsiion -->
+    <button type="button" id="btnGetNotification">取得顯示通知權限</button>
+
+    <script>
+        $('#btnGetNotification').click(function () {
+
+            if (Notification && Notification.permission === 'default') {
+                Notification.requestPermission(function (permission) {
+                    if (!('permission' in Notification)) {
+                        Notification.permission = permission;
+                    }
+                });
+            }
+            else if (Notification.permission === 'granted') {
+                alert('已經有取得權限了!');
+            }
+            else {
+                alert('請檢查是否你的瀏覽器支援');
+            }
+        });
+    </script>
+
+
+    <!-- Display Notification -->
+    <button type="button" id="btnShowNotification">跑一個顯示通知範例</button>
+    <script>
+
+        var notification = null;
+        function ShowNotification(title, body) {
+            notification = new Notification(title, {
+                icon: '/icon/ms-icon-310x310.png',
+                body: body,
+                onclick: function () {
+                    parent.focus();
+                    window.focus(); //just in case, older browsers
+                    this.close();
+                }
+            })
+        }
+
+        $('#btnShowNotification').click(function () {
+            if (Notification && Notification.permission === 'default') {
+                Notification.requestPermission(function (permission) {
+                    if (!('permission' in Notification)) {
+                        Notification.permission = permission;
+                    }
+                });
+            }
+            else if (Notification.permission === 'granted') {
+                ShowNotification("測試標題", "測試內文");
+                //三秒後自動關閉
+                setTimeout(notification.close.bind(notification), 3000);
+            }
+            else {
+                alert('請檢查是否你的瀏覽器支援');
+            }
+        });
+    </script>
+
+
+    <!-- Start FireBase -->
+    <button type="button" id="btnStarGetTokenAndReceivePush">取得 Push Token etc..</button>
+    <br />
+    <hr />
+    <span id="log" style="color: red"></span>
+    <script>
+
+        var messaging = null;
+
+        $(document).ready(function () {
+
+
+            var config = {
+                apiKey: "AIzaSyCjRf8Ulp2PKtZO-FWh6OAB8_ig2GJMZAU",
+                authDomain: "localhost:61441",
+                databaseURL: "https://donma-test-web-push.firebaseio.com",
+                projectId: "donma-test-web-push",
+                storageBucket: "donma-test-web-push.appspot.com",
+                messagingSenderId: "548756765078"
+            };
+
+            firebase.initializeApp(config);
+
+
+            messaging = firebase.messaging();
+
+            //收到訊息後的處理
+            messaging.onMessage(function (payload) {
+                //Log
+                $('#log').prepend("Message received :" + JSON.stringify(payload) + "<br><br>")
+
+                //如果可以顯示通知就做顯示通知
+                if (Notification.permission === 'granted') {
+                    ShowNotification(payload.data.title, payload.data.body);
+                    //三秒後自動關閉
+                    setTimeout(notification.close.bind(notification), 3000);
+                }
+            });
+
+
+        });
+
+
+
+        function RegistUserTokenToSelfServer(user_token, successFunc, errorFunc) {
+            var $res = '';
+            $.ajax({
+                type: "POST",
+                url: "receive_user_token.aspx",
+                contentType: 'application/x-www-form-urlencoded',
+                async: true,
+                cache: false,
+                dataType: 'text',
+                data: { user_token: user_token },
+                success: function (data) {
+                    if (data.hasOwnProperty("d")) {
+                        $res = data.d;
+                        if (successFunc != null)
+                            successFunc(data.d);
+                    }
+                    else {
+                        $res = data;
+                        if (successFunc != null)
+                            successFunc(data);
+                    }
+                },
+                error: function (e) {
+                    if (errorFunc != null)
+                        errorFunc(e);
+                }
+
+
+            });
+            return $res;
+        }
+
+
+        $('#btnStarGetTokenAndReceivePush').click(function () {
+
+            messaging.getToken()
+                .then(function (currentToken) {
+                    $('#log').append("TOKEN: " + currentToken + "<br><br>")
+                    if (currentToken) {
+                        RegistUserTokenToSelfServer(currentToken, function (result) {
+                            $('#log').prepend("送回給自己 Server 的結果 :" + result + "<br><br>")
+                        });
+                    } else {
+                        $('#log').prepend('註冊失敗請檢查相關設定.');
+                    }
+                })
+                .catch(function (err) {
+
+                    $('#log').prepend("跟 Server 註冊失敗 原因:" + err + "<br>");
+                });
+
+        });
+
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1 @@
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="receive_user_token.aspx.cs" Inherits="CSharp_Web_Notification_Sample.receive_user_token" %>
